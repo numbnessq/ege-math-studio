@@ -71,13 +71,14 @@ try {
       [row.querySelector('dt').innerText,row.querySelector('dd').innerText])),expected[i]);
   }
   await page.pdf({path:'teacher-print.pdf',format:'A4',margin:{top:'10mm',bottom:'10mm',left:'12mm',right:'12mm'}});
-  const pdfPages=execFileSync('pdftotext',['-layout','teacher-print.pdf','-'],{encoding:'utf8'}).split('\f').filter(p=>p.trim());
+  const pdfPages=JSON.parse(execFileSync('python',['-c',
+    'import pymupdf,json; print(json.dumps([p.get_text() for p in pymupdf.open("teacher-print.pdf")]))'
+  ],{encoding:'utf8'}));
+  const compact=s=>s.normalize('NFKC').replace(/\s+/gu,'');
   const tail=pdfPages.slice(-4);
-  assert.ok(tail[0].includes('Ответы для учителя'));
   for(let i=0;i<4;i++){
-    const printed=tail[i].replace(/\s+/g,' ').trim();
-    assert.ok(printed.includes('Вариант '+(i+1)));
-    for(const [number,answer] of expected[i])assert.ok(printed.includes(number+' '+answer),number+' '+answer+' в PDF, вариант '+(i+1));
+    const expectedPage=(i===0?'Ответы для учителя':'')+'Вариант '+(i+1)+expected[i].flat().join('');
+    assert.equal(compact(tail[i]),compact(expectedPage),'Содержимое страницы ключа '+(i+1));
   }
   assert.deepEqual(errors,[]);
   console.log('Проверены замена темы, чертёж и 76 ответов на последних четырёх страницах PDF.');
