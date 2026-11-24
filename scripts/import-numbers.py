@@ -1,8 +1,10 @@
-import requests,bs4,json,re
-base='https://ege.kowalt.ru'
-for url in ['/matematika-profil/zadanie-1/','/js/ege-catalog.js','/js/ege.js','/matematika-profil/problem/40b442/reshenie/','/matematika-profil/bank/']:
- r=requests.get(base+url,timeout=16);r.encoding='utf-8'
- soup=bs4.BeautifulSoup(r.text,'html.parser')
- print(url,r.status_code,[(p[:350]) for p in re.findall(r'[^<>\n]{0,85}(?:\.json\b|\.json\?|data-ege|data-src|data-api|data-bank)[^<>\n]{0,140}',r.text)][:45])
- if 'reshenie' in url:print([(str(x)[:500]) for x in soup.select('[class*=answer], [class*=result],script[type="application/ld+json"]')][:10])
- if 'bank/' in url:print([(x.get('href'),x.get_text(' ',strip=True)) for x in soup.select('a[href]')][-20:])
+import requests,concurrent.futures
+host='https://ege.kowalt.ru/data/'
+def peek(path):
+ try:
+  r=requests.get(host+path,timeout=12); data=r.json()
+  if isinstance(data,dict):
+   print(path,list(data)[:30],[(k,str(v)[:450]) for k,v in list(data.items())[:15]])
+  else: print(path,len(data),str(data[:1])[:2000])
+ except Exception as e:print(path,str(e))
+list(concurrent.futures.ThreadPoolExecutor(3).map(peek,['matematika-profil.json','catalog/matematika-profil/1.json','worksheets/matematika-profil/1.json','matematika-profil/40b442.json','catalog/matematika-profil/19.json']))
