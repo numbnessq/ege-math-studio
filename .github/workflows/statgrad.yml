@@ -1,0 +1,22 @@
+name: Обновить ссылки просмотра СтатГрада
+on:
+  push:
+    branches: [import/statgrad-viewers]
+    paths: ['scripts/import-statgrad-viewers.py', '.github/workflows/statgrad.yml']
+permissions:
+  contents: write
+jobs:
+  catalog:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - run: python scripts/import-statgrad-viewers.py
+      - run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/statgrad.js
+          if ! git diff --cached --quiet; then
+            git commit -m 'Обновить публичные адреса PDF с водяным знаком'
+            git push origin HEAD:import/statgrad-viewers
+          fi
