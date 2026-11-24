@@ -7,7 +7,14 @@ try {
   const page=await browser.newPage({viewport:{width:390,height:844}});
   const errors=[];
   page.on('pageerror', e=>errors.push(e.message));
-  await page.goto('https://numbnessq.github.io/ege-math-studio/?rev=shuffle');
+  for(let attempt=0;attempt<6;attempt++){
+    await page.goto('https://numbnessq.github.io/ege-math-studio/?rev=shuffle1&attempt='+attempt);
+    try { await page.locator('[data-mode="fipi-exam"]').waitFor({timeout:6500}); break; }
+    catch (error) {
+      console.log('Не загружены режимы',attempt,errors,await page.locator('script').evaluateAll(s=>s.map(x=>x.getAttribute('src'))));
+      if(attempt===5)throw error;
+    }
+  }
   const mode=label=>page.getByRole('button',{name:new RegExp('^'+label)}).click();
   const tasks=()=>page.locator('.sheet:not([hidden]) article');
   const ids=()=>tasks().evaluateAll(nodes=>nodes.map(node=>node.dataset.taskId));
