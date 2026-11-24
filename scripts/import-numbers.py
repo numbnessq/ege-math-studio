@@ -1,7 +1,8 @@
-import requests,bs4,concurrent.futures,urllib.parse
-def probe(url):
- try:
-  r=requests.get(url,timeout=15); soup=bs4.BeautifulSoup(r.content,'html.parser')
-  return (url,r.status_code,len(r.content),[str(s)[:300] for s in soup.find_all('script')][:30],[(a.get_text(' ',strip=True)[:50],a.get('href')) for a in soup.find_all('a',href=True) if '40b442' in str(a).lower() or 'все задания №' in a.get_text(' ',strip=True).lower()][:10],[(c.get('class'),c.get_text(' ',strip=True)[:160]) for c in soup.select('[class*=answer], [class*=pagination], [id*=load]')][:10])
- except Exception as e:return str(e)
-for r in concurrent.futures.ThreadPoolExecutor(3).map(probe,['https://ege.kowalt.ru/matematika-profil/','https://ege.kowalt.ru/matematika-profil/problem/40b442/','https://ege.kowalt.ru/matematika-profil/zadanie-1/']):print(r)
+import requests,bs4,json,re
+base='https://ege.kowalt.ru'
+for url in ['/matematika-profil/zadanie-1/','/js/ege-catalog.js','/js/ege.js','/matematika-profil/problem/40b442/reshenie/','/matematika-profil/bank/']:
+ r=requests.get(base+url,timeout=16);r.encoding='utf-8'
+ soup=bs4.BeautifulSoup(r.text,'html.parser')
+ print(url,r.status_code,[(p[:350]) for p in re.findall(r'[^<>\n]{0,85}(?:\.json\b|\.json\?|data-ege|data-src|data-api|data-bank)[^<>\n]{0,140}',r.text)][:45])
+ if 'reshenie' in url:print([(str(x)[:500]) for x in soup.select('[class*=answer], [class*=result],script[type="application/ld+json"]')][:10])
+ if 'bank/' in url:print([(x.get('href'),x.get_text(' ',strip=True)) for x in soup.select('a[href]')][-20:])
