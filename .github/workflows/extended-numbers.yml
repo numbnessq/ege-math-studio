@@ -1,0 +1,22 @@
+name: Сверка классификации
+on:
+  push:
+    branches: [import/extended-index]
+    paths: ['scripts/extend-numbers.py','.github/workflows/extended-numbers.yml']
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install requests beautifulsoup4 --quiet
+      - run: python -u scripts/extend-numbers.py
+      - run: |
+          if test -f data/exam-numbers.js; then
+            git config user.name github-actions
+            git config user.email github-actions@users.noreply.github.com
+            git add data/exam-numbers.js
+            git diff --cached --quiet || git commit -m 'Сверить коды заданий с дополнительным каталогом'
+            git push
+          fi
