@@ -1,10 +1,133 @@
-<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#153c41"><title>Разлиновано — конструктор ЕГЭ</title><link rel="stylesheet" href="style.css?v=shuffle1"></head><body>
-<header><div class="wrap top"><a class="brand" href="./"><b>∿</b> Разлиновано</a><a class="archive-link" href="statgrad.html">Архив СтатГрада ↗</a></div></header>
-<main class="wrap"><section class="hero"><div><h1>Конструктор вариантов</h1><p>Соберите профильный ЕГЭ по математике и распечатайте ключи для учителя.</p></div></section><div id="mode-cards" class="mode-cards" role="group" aria-label="Режим сборки"></div>
-<div class="layout"><aside><h2>Параметры сборки</h2><select id="mode" hidden aria-label="Что собрать"><option value="fipi-exam">ЕГЭ из банка ФИПИ</option><option value="statgrad">Микс СтатГрада</option><option value="fipi">Тренировка по теме</option><option value="series">Однотипные задачи</option><option value="exam">ЕГЭ с новыми числами</option><option value="official">Примеры из методички ФИПИ</option></select>
-<div id="typeBox"><label for="type">Номер задания</label><select id="type"></select></div><div id="familyBox"><label for="family">Тип задачи</label><select id="family"></select></div>
-<div id="bank-settings" hidden><label for="keys-only"><input type="checkbox" id="keys-only"> Только с ответами</label><div id="original-picker"><label for="subtype">Подтип задачи</label><select id="subtype"></select><label for="original-choice">Задание</label><select id="original-choice"></select></div><details id="exam-subtypes" hidden><summary>Указать темы по номерам</summary><div id="exam-subtype-list"></div></details><p><a id="math100-topics" href="https://math100.ru/ege-profil2024/" target="_blank" rel="noreferrer">Темы и задачи на Math100 ↗</a></p></div>
-<div id="copies"><span class="label">Количество вариантов</span><div id="counts" role="group" aria-label="Количество вариантов"></div></div>
-<p id="help"></p><button id="generate" class="primary">Собрать комплект</button></aside>
-<section class="paper" aria-label="Задания"><div class="paperHead"><div><small id="meta"></small><h2 id="title"></h2></div><button id="print">Печать</button></div><nav id="variants" aria-label="Варианты"></nav><label id="filter-box" hidden>Показать в варианте<select id="topic-filter"></select></label><div id="jump-list" aria-label="Перейти к заданию" hidden></div><div id="tasks"></div><div id="message" role="status"></div></section></div>
-<footer><span>Разлиновано · тренировочный банк</span><a href="https://fipi.ru/ege/otkrytyy-bank-zadaniy-ege/" target="_blank" rel="noreferrer">Открытый банк ФИПИ ↗</a><a href="https://fipi.ru/ege/demoversii-specifikacii-kodifikatory" target="_blank" rel="noreferrer">Спецификации ↗</a></footer></main><script src="data/bank.js"></script><script src="data/fipi.js"></script><script src="data/exam-numbers.js"></script><script src="data/statgrad-tasks.js?v=shuffle1"></script><script src="subtypes.js"></script><script src="official-bank.js?v=shuffle1"></script><script src="engine.js"></script><script src="figures.js"></script><script src="app.js?v=shuffle1"></script></body></html>
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f6ef">
+  <title>Разлиновано — конструктор ЕГЭ</title>
+  <link rel="stylesheet" href="style.css?v=workbook1">
+</head>
+<body>
+  <a class="skip-link" href="#builder">К конструктору</a>
+  <header class="site-header">
+    <div class="wrap top">
+      <a class="brand" href="index.html"><b aria-hidden="true">∿</b> Разлиновано</a>
+      <a class="header-link" href="statgrad.html">Архив СтатГрада</a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <h1 id="hero-title">Конструктор<br class="hero-break"> вариантов</h1>
+        <p>Соберите профильный ЕГЭ по математике и распечатайте ключи для учителя.</p>
+      </div>
+      <svg class="hero-graph" viewBox="0 0 520 228" aria-hidden="true" focusable="false">
+        <defs>
+          <pattern id="graph-grid" width="24" height="24" patternUnits="userSpaceOnUse">
+            <path d="M24 0H0V24" fill="none" stroke="#bdcdf2" stroke-width="1"/>
+          </pattern>
+        </defs>
+        <rect x="0" y="0" width="520" height="228" fill="url(#graph-grid)"/>
+        <path d="M12 168H500m-8-4 8 4-8 4M216 216V17m-4 8 4-8 4 8" fill="none" stroke="#7289b8" stroke-width="1.4" stroke-linejoin="round"/>
+        <path d="M104 22Q264 346 424 22" fill="none" stroke="#244fd6" stroke-width="3" stroke-linecap="round"/>
+        <path d="M259 228 439 46" fill="none" stroke="#b74430" stroke-width="2" stroke-dasharray="6 6"/>
+        <g fill="#244fd6" stroke="#e9efff" stroke-width="3">
+          <circle cx="160" cy="115.56" r="5"/>
+          <circle cx="264" cy="184" r="5"/>
+          <circle cx="344" cy="143.5" r="5"/>
+        </g>
+        <g fill="#48628f" font-family="Georgia, serif" font-style="italic" font-size="16">
+          <text x="500" y="188">x</text>
+          <text x="226" y="25">y</text>
+        </g>
+      </svg>
+    </section>
+
+    <section class="builder-modes" aria-labelledby="builder">
+      <h2 id="builder" tabindex="-1">Режим сборки</h2>
+      <div id="mode-cards" class="mode-cards" role="group" aria-labelledby="builder"></div>
+    </section>
+
+    <div class="layout">
+      <aside class="settings" aria-labelledby="settings-title">
+        <h2 id="settings-title">Параметры сборки</h2>
+        <select id="mode" hidden aria-label="Что собрать">
+          <option value="fipi-exam">ЕГЭ из банка ФИПИ</option>
+          <option value="statgrad">Микс СтатГрада</option>
+          <option value="fipi">Тренировка по теме</option>
+          <option value="series">Однотипные задачи</option>
+          <option value="exam">ЕГЭ с новыми числами</option>
+          <option value="official">Примеры из методички ФИПИ</option>
+        </select>
+        <div id="typeBox">
+          <label for="type">Номер задания</label>
+          <select id="type"></select>
+        </div>
+        <div id="familyBox">
+          <label for="family">Тип задачи</label>
+          <select id="family"></select>
+        </div>
+        <div id="bank-settings" hidden>
+          <label class="check-row" for="keys-only"><input type="checkbox" id="keys-only"> Только с ответами</label>
+          <div id="original-picker">
+            <label for="subtype">Подтип задачи</label>
+            <select id="subtype"></select>
+            <label for="original-choice">Задание</label>
+            <select id="original-choice"></select>
+          </div>
+          <details id="exam-subtypes" hidden>
+            <summary>Указать темы по номерам</summary>
+            <div id="exam-subtype-list"></div>
+          </details>
+          <p class="settings-source"><a id="math100-topics" href="https://math100.ru/ege-profil2024/" target="_blank" rel="noreferrer">Темы и задачи на Math100 ↗</a></p>
+        </div>
+        <div id="copies">
+          <span class="label" id="copies-label">Количество вариантов</span>
+          <div id="counts" role="group" aria-labelledby="copies-label"></div>
+        </div>
+        <p id="help" aria-live="polite"></p>
+        <button id="generate" class="primary" type="button">Собрать комплект</button>
+      </aside>
+
+      <section class="paper" aria-labelledby="title">
+        <div class="paperHead">
+          <div><small id="meta"></small><h2 id="title"></h2></div>
+          <button id="print" type="button">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+              <path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6zM6 12h1"/>
+            </svg>
+            Печать
+          </button>
+        </div>
+        <nav id="variants" aria-label="Варианты"></nav>
+        <div class="paper-tools">
+          <label id="filter-box" hidden>Показать в варианте<select id="topic-filter"></select></label>
+          <div class="jump-tools">
+            <span id="jump-title">Перейти к заданию</span>
+            <div id="jump-list" role="group" aria-labelledby="jump-title" hidden></div>
+          </div>
+        </div>
+        <div id="tasks"></div>
+        <div id="message" role="status"></div>
+      </section>
+    </div>
+
+    <footer>
+      <span>Разлиновано · тренировочный банк</span>
+      <a href="https://fipi.ru/ege/otkrytyy-bank-zadaniy-ege/" target="_blank" rel="noreferrer">Открытый банк ФИПИ ↗</a>
+      <a href="https://fipi.ru/ege/demoversii-specifikacii-kodifikatory" target="_blank" rel="noreferrer">Спецификации ↗</a>
+    </footer>
+  </main>
+
+  <script src="data/bank.js"></script>
+  <script src="data/fipi.js"></script>
+  <script src="data/exam-numbers.js"></script>
+  <script src="data/statgrad-tasks.js?v=shuffle1"></script>
+  <script src="subtypes.js"></script>
+  <script src="official-bank.js?v=shuffle1"></script>
+  <script src="engine.js"></script>
+  <script src="figures.js"></script>
+  <script src="app.js?v=workbook1"></script>
+</body>
+</html>

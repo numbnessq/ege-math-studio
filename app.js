@@ -16,10 +16,10 @@ const bankFor = mode => mode==='statgrad'?statgradIndex:officialIndex;
 const modes = [
  ['fipi-exam','ЕГЭ из банка ФИПИ','19 заданий, случайный выбор по каждому номеру'],
  ['statgrad','Микс СтатГрада','19 заданий из разных диагностик и тренировок'],
- ['exam','ЕГЭ с новыми числами','19 заданий. В параллельных вариантах меняются числа'],
  ['fipi','Тренировка по теме','Отдельные задания ФИПИ по номеру и подтипу'],
  ['series','Однотипные задачи','Одна тема, до четырёх задач с разными числами'],
- ['official','Разборы ФИПИ','Примеры из методических рекомендаций']
+ ['exam','ЕГЭ с новыми числами','19 заданий. В параллельных вариантах меняются числа'],
+ ['official','Примеры из методички ФИПИ','Задачи из методических рекомендаций']
 ];
 function taskLabel(t){
  const subject=t.subtype==='Другие задачи'?topicName(t.type):t.subtype;
@@ -98,7 +98,15 @@ function configureFamily(){
  options($('family'),families.filter(t=>t.type===Number($('type').value)).map(t=>[t.family,t.title]));
 }
 function counts(){
- $('counts').replaceChildren(...[1,2,3,4].map(i=>{const b=button(i,()=>{count=i;counts()});b.setAttribute('aria-pressed',String(i===count));return b}));
+ const group=$('counts');
+ group.replaceChildren(...[1,2,3,4].map(i=>{
+   const b=button(i,()=>{
+     count=i;
+     for(const option of group.children)option.setAttribute('aria-pressed',String(option===b));
+   });
+   b.setAttribute('aria-pressed',String(i===count));
+   return b;
+ }));
 }
 function generate(){
  const mode=$('mode').value;
@@ -269,7 +277,8 @@ function render(){
  const jump=$('jump-list');jump.hidden=!isExam();
  jump.replaceChildren(...(isExam()?tasks.map((_,i)=>button(i+1,()=>{
    topicFilter.value='all';applyFilter();
-   $('tasks').querySelector('.sheet:not([hidden]) [data-position="'+i+'"]').scrollIntoView({block:'start',behavior:'smooth'});
+   const behavior=matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth';
+   $('tasks').querySelector('.sheet:not([hidden]) [data-position="'+i+'"]').scrollIntoView({block:'start',behavior});
  })):[]));
  $('message').textContent='Открыт вариант '+(active+1)+' из '+sheets.length;
 }
