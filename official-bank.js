@@ -43,7 +43,7 @@ function makeOfficialIndex(rows, mapping = {}) {
   return byType;
 }
 
-function officialSheets(byType, count, keysOnly, random = Math.random, subtypes = new Map()) {
+function officialSheets(byType, count, keysOnly, random = Math.random, subtypes = new Map(), previous = []) {
   const result = Array.from({length: count}, () => []);
   for (let n = 1; n <= 19; n++) {
     const pool = (byType.get(n) || []).filter(t => !keysOnly || hasOfficialAnswer(t));
@@ -51,8 +51,19 @@ function officialSheets(byType, count, keysOnly, random = Math.random, subtypes 
     if (subtype) pool.splice(0, pool.length, ...pool.filter(t => t.subtype === subtype));
     if (pool.length < count) throw Error('Для № ' + n + ' доступно ' + pool.length +
       ' заданий. Измените подтип, число вариантов или фильтр ответов.');
-    for (const sheet of result) {
-      sheet.push(pool.splice(Math.floor(random() * pool.length), 1)[0]);
+    for (const [i,sheet] of result.entries()) {
+      const old = previous[i]?.[n-1]?.id;
+      const fresh = pool.filter(t => t.id !== old);
+      const unseenWorks = fresh.filter(t => !t.work || !sheet.some(x => x.work === t.work));
+      let choices = unseenWorks.length ? unseenWorks : fresh;
+      if (!choices.length) choices = pool;
+      if (sheet[0]?.work && sheet.every(t => t.work === sheet[0].work)) {
+        const differentWork = pool.filter(t => t.work !== sheet[0].work);
+        if (differentWork.length && !choices.some(t => t.work !== sheet[0].work)) choices = differentWork;
+      }
+      const selected = choices[Math.floor(random() * choices.length)];
+      sheet.push(selected);
+      pool.splice(pool.indexOf(selected),1);
     }
   }
   return result;

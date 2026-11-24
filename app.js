@@ -2,17 +2,33 @@
 const $=id=>document.getElementById(id);
 const {topics,records,official}=mathBank;
 const families=[...new Map(records.map(t=>[t.family,t])).values()];
-let count=4, active=0, sheets=[], currentMode='series', packetKeysOnly=false, packetSubtype='';
+let count=1, active=0, sheets=[], currentMode='series', packetKeysOnly=false, packetSubtype='';
 function node(tag,text){const el=document.createElement(tag);if(text!==undefined)el.textContent=text;return el}
 function button(text,act){const b=node('button',text);b.onclick=act;return b}
 function options(el,items){el.replaceChildren(...items.map(([v,label])=>new Option(label,v)))}
 const originalTasks = globalThis.fipiBank?.tasks || [];
 const officialIndex = makeOfficialIndex(originalTasks, globalThis.examNumbers);
-const isExam = () => currentMode==='exam' || currentMode==='fipi-exam';
-const bankMode = mode => mode==='fipi' || mode==='fipi-exam';
+const statgradIndex=makeOfficialIndex(globalThis.statgradTasks || []);
+const isExam = () => ['exam','fipi-exam','statgrad'].includes(currentMode);
+const bankMode = mode => ['fipi','fipi-exam','statgrad'].includes(mode);
 const topicName = n => topics[n-1] || 'Вне текущей нумерации';
-function available(n, keys=$('keys-only').checked) {
- return (officialIndex.get(n)||[]).filter(t=>!keys || hasOfficialAnswer(t));
+const bankFor = mode => mode==='statgrad'?statgradIndex:officialIndex;
+const modes = [
+ ['fipi-exam','ЕГЭ из банка ФИПИ','19 заданий, случайный выбор по каждому номеру'],
+ ['statgrad','Микс СтатГрада','19 заданий из разных диагностик и тренировок'],
+ ['exam','ЕГЭ с новыми числами','19 заданий. В параллельных вариантах меняются числа'],
+ ['fipi','Тренировка по теме','Отдельные задания ФИПИ по номеру и подтипу'],
+ ['series','Однотипные задачи','Одна тема, до четырёх задач с разными числами'],
+ ['official','Разборы ФИПИ','Примеры из методических рекомендаций']
+];
+function taskLabel(t){
+ const subject=t.subtype==='Другие задачи'?topicName(t.type):t.subtype;
+ const text=(t.text || '').replace(/\s+/g,' ').trim();
+ return text ? subject+' · '+text.slice(0,83)+(text.length>83?'…':'') : subject;
+}
+function keysOnly(){return $('mode').value!=='statgrad' && $('keys-only').checked}
+function available(n, keys=keysOnly(), mode=$('mode').value) {
+ return (bankFor(mode).get(n)||[]).filter(t=>!keys || hasOfficialAnswer(t));
 }
 function subtypeOptions(select, pool, previous=select.value){
  const totals=new Map();
@@ -31,7 +47,7 @@ function chooseOriginal(){
  const math100Topic=Number($('type').value)===1 ? math100PlanarTopics.indexOf($('subtype').value)+1 : 0;
  topicLink.href=math100Topic?'https://math100.ru/prof-ege_2023_1-'+math100Topic+'/':'https://math100.ru/ege-profil2024/';
  topicLink.textContent=math100Topic?'Этот подтип на Math100 ↗':'Темы и задачи на Math100 ↗';
- options($('original-choice'),group.map((t,i)=>[t.id,(i+1)+' · '+officialCode(t)+' · '+(t.text || t.html.replace(/<[^>]*>/g,' ')).replace(/\s+/g,' ').trim().slice(0,90)]));
+ options($('original-choice'),group.map(t=>[t.id,taskLabel(t)]));
  $('generate').disabled=!group.length;
 }
 function configureExamSubtypes(){
@@ -52,23 +68,24 @@ function configureOriginalSubtype(previous){
 }
 function configureTypes(){
  const mode=$('mode').value,original=mode==='official';
- const isBank=bankMode(mode),full=mode==='fipi-exam'||mode==='exam';
- $('bank-settings').hidden=!isBank;$('original-picker').hidden=mode!=='fipi';$('exam-subtypes').hidden=mode!=='fipi-exam';
+ for(const btn of $('mode-cards').children)btn.setAttribute('aria-pressed',String(btn.dataset.mode===mode));
+ const isBank=bankMode(mode),full=['fipi-exam','exam','statgrad'].includes(mode);
+ $('bank-settings').hidden=!isBank;$('keys-only').parentElement.hidden=mode==='statgrad';$('original-picker').hidden=mode!=='fipi';$('exam-subtypes').hidden=mode==='fipi';
  $('generate').disabled=false;
  $('typeBox').hidden=full;$('familyBox').hidden=mode!=='series';$('copies').hidden=original||mode==='fipi';
  if(isBank){
    const prev=$('type').value;
-   const numbers=[...officialIndex.keys()].sort((a,b)=>(a||99)-(b||99));
+   const numbers=[...bankFor(mode).keys()].sort((a,b)=>(a||99)-(b||99));
    options($('type'),numbers.map(n=>[n,(n?'№ '+n+' · ':'')+topicName(n)+' ('+available(n).length+')']));
    if(prev!=='' && numbers.includes(Number(prev))) $('type').value=prev;
    if(mode==='fipi')configureOriginalSubtype();
-   if(mode==='fipi-exam'){
+   if(full){
      configureExamSubtypes();
      $('math100-topics').href='https://math100.ru/ege-profil2024/';
      $('math100-topics').textContent='Темы и задачи на Math100 ↗';
    }
-   $('help').textContent=originalTasks.length+' карточек в загруженном банке. '+(full?'Для каждого номера случайно выбирается оригинальное задание.':'Выберите номер, подтип и карточку.');
-   $('generate').textContent=full?'Собрать комплект':'Открыть задачу';
+   $('help').textContent=mode==='statgrad'?'Для каждого номера выбирается задача из доступных работ СтатГрада. Работа и критерии указаны под заданием.':full?'Подберём 19 заданий. При желании укажите темы по номерам.':'Выберите номер, подтип и задание.';
+   $('generate').textContent=full?'Собрать варианты':'Открыть задачу';
    return;
  }
  const numbers=original?official.map(t=>t.type):topics.map((_,i)=>i+1);
@@ -91,13 +108,13 @@ function generate(){
      const task=configuredCards().find(t=>String(t.id)===$('original-choice').value);
      if(!task)throw Error('В этой подборке нет заданий.');
      next=[[task]];
-   }else if(mode==='fipi-exam'){
+   }else if(bankMode(mode)){
      const selection=new Map([...$('exam-subtype-list').querySelectorAll('select')].map(s=>[Number(s.dataset.number),s.value]));
-     next=officialSheets(officialIndex,count,$('keys-only').checked,Math.random,selection);
+     next=officialSheets(bankFor(mode),count,keysOnly(),Math.random,selection,mode===currentMode?sheets:[]);
    }
    else next=mode==='official'?[[official.find(t=>t.type===Number($('type').value))]]:buildSheets(mathBank,mode,Number($('family').value),count);
  }catch(error){$('help').textContent=error.message;return}
- sheets=next;currentMode=mode;packetKeysOnly=$('keys-only').checked;packetSubtype=$('subtype').value;
+ sheets=next;currentMode=mode;packetKeysOnly=keysOnly();packetSubtype=$('subtype').value;
  active=0;topicFilter.value='all';render();
 }
 const topicFilter=$('topic-filter');
@@ -141,41 +158,43 @@ function answerKey(){
    const group=node('section');group.append(node('h3','Вариант '+(i+1)));
    const list=node('dl');
    sheet.forEach((t,p)=>{
-     const entry=node('div');entry.append(node('dt','№ '+(isExam()?p+1:(t.type||'—'))),node('dd',formatAnswer(t)));list.append(entry);
+     const entry=node('div'),answer=node('dd');
+     if(t.work && !hasOfficialAnswer(t)){
+       const link=node('a',formatAnswer(t));link.href=t.source;answer.append(link);
+     }else answer.textContent=formatAnswer(t);
+     entry.append(node('dt','№ '+(isExam()?p+1:(t.type||'—'))),answer);list.append(entry);
    });
    group.append(list);key.append(group);
  });
  return key;
 }
-function formatAnswer(t){if(!hasOfficialAnswer(t))return 'Ответ не загружен · '+officialCode(t);return String(t.answer).replace(/(\d)\.(\d)/g,'$1,$2')}
+function formatAnswer(t){if(!hasOfficialAnswer(t))return t.work?'См. критерии СтатГрад '+t.work:'Ответ не загружен · '+officialCode(t);return String(t.answer).replace(/(\d)\.(\d)/g,'$1,$2')}
 function bankEditor(t,position){
  const edit=node('details');edit.className='task-editor';edit.append(node('summary','Заменить задание'));
  edit.ontoggle=()=>{
    if(!edit.open || edit.children.length>1)return;
    const controls=node('div');controls.className='edit-controls';
-   const topic=node('select'),subtype=node('select'),card=node('select');
-   const types=[...officialIndex.keys()].filter(n=>n>0&&(n<=12)===(position<12)).sort((a,b)=>a-b);
-   options(topic,types.map(n=>[n,'№ '+n+' · '+topicName(n)]));topic.value=String(t.type);
+   const subtype=node('select'),card=node('select');
+   const number=position+1;
    const used=new Set(sheets.flat().map(item=>item.id));
    const keys=packetKeysOnly;
    let pool;
    function refresh(){
-     pool=available(Number(topic.value),keys).filter(item=>!used.has(item.id) && (!subtype.value || item.subtype===subtype.value));
-     options(card,pool.map(item=>[item.id,officialCode(item)]));apply.disabled=!pool.length;
+     pool=available(number,keys,currentMode).filter(item=>!used.has(item.id) && (!subtype.value || item.subtype===subtype.value));
+     options(card,pool.map(item=>[item.id,taskLabel(item)]));apply.disabled=!pool.length;
    }
    const apply=button('Применить к этому варианту',()=>{
      const chosen=pool.find(item=>String(item.id)===card.value);if(!chosen)return;
      sheets[active][position]=chosen;topicFilter.value='all';render();
      $('message').textContent='Задание и ключ обновлены в варианте '+(active+1)+'.';
    });
-   for(const [caption,select] of [['Тема замены',topic],['Подтип замены',subtype],['Карточка ФИПИ',card]]){
+   for(const [caption,select] of [['Подтип замены',subtype],['Задание',card]]){
      const label=node('label',caption);label.append(select);controls.append(label);
    }
    function refreshSubtypes(previous){
-     subtypeOptions(subtype,available(Number(topic.value),keys).filter(item=>!used.has(item.id)),previous);
+     subtypeOptions(subtype,available(number,keys,currentMode).filter(item=>!used.has(item.id)),previous);
      refresh();
    }
-   topic.onchange=()=>refreshSubtypes('');
    subtype.onchange=refresh;
    refreshSubtypes(t.subtype);
    controls.append(apply);edit.append(controls);
@@ -188,8 +207,11 @@ function taskView(t,position){
  heading.append(node('b',number?'№ '+number:'Архив'),node('span',(number!==t.type?'Тип № '+t.type+' · ':'')+topicName(t.type)));
  if(bankMode(currentMode)){
    if(isExam())heading.append(bankEditor(t,position));
-   heading.append(node('small',officialCode(t)));article.append(heading,Object.assign(node('div',t.subtype),{className:'subtype-caption'}),originalBody(t));
-   const a=node('a','Оригинал в банке ФИПИ ↗');a.href=t.source;a.target='_blank';a.rel='noreferrer';article.append(a);
+   article.dataset.taskId=t.id;
+   const body=originalBody(t);
+   if(t.work)body.classList.add('statgrad-crop');
+   article.append(heading,Object.assign(node('div',t.subtype),{className:'subtype-caption'}),body);
+   const a=node('a',t.work?'СтатГрад '+t.work+' · работа и критерии ↗':'Оригинал в банке ФИПИ ↗');a.href=t.source;a.target='_blank';a.rel='noreferrer';article.append(a);
    if(hasOfficialAnswer(t)){
      const d=node('details');d.append(node('summary','Ответ'),node('strong','Ответ: '+formatAnswer(t)));
      if(t.answerSource){const ref=node('a','Источник ответа ↗');ref.href=t.answerSource;ref.target='_blank';ref.rel='noreferrer';d.append(node('br'),ref)}
@@ -224,8 +246,8 @@ function taskView(t,position){
 }
 function render(){
  const tasks=sheets[active];
- $('title').textContent=isExam()?'Полный вариант':currentMode==='fipi'?topicName(tasks[0].type):tasks[0].title;
- $('meta').textContent=bankMode(currentMode)?'Открытый банк ФИПИ':currentMode==='official'?'Материалы ФИПИ · адаптация условия':'Авторские аналоги · '+(currentMode==='exam'?'19 заданий':'задание № '+tasks[0].type);
+ $('title').textContent=isExam()?modes.find(([id])=>id===currentMode)[1]:currentMode==='fipi'?topicName(tasks[0].type):tasks[0].title;
+ $('meta').textContent=currentMode==='statgrad'?'СтатГрад · сборка по номерам':bankMode(currentMode)?'Открытый банк ФИПИ':currentMode==='official'?'Материалы ФИПИ · адаптация условия':'Авторские аналоги · '+(currentMode==='exam'?'19 заданий':'задание № '+tasks[0].type);
  $('variants').replaceChildren(...sheets.map((_,i)=>{const b=button('Вариант '+(i+1),()=>{active=i;render()});b.setAttribute('aria-pressed',String(i===active));return b}));
  const previous=topicFilter.value;
  $('filter-box').hidden=!isExam();
@@ -244,18 +266,18 @@ function render(){
    });return section;
  });
  $('tasks').replaceChildren(...views,answerKey());applyFilter();
+ const jump=$('jump-list');jump.hidden=!isExam();
+ jump.replaceChildren(...(isExam()?tasks.map((_,i)=>button(i+1,()=>{
+   topicFilter.value='all';applyFilter();
+   $('tasks').querySelector('.sheet:not([hidden]) [data-position="'+i+'"]').scrollIntoView({block:'start',behavior:'smooth'});
+ })):[]));
  $('message').textContent='Открыт вариант '+(active+1)+' из '+sheets.length;
 }
 $('mode').onchange=configureTypes;$('type').onchange=()=>{$('mode').value==='fipi'?configureOriginalSubtype(''):configureFamily()};$('keys-only').onchange=configureTypes;$('subtype').onchange=chooseOriginal;$('generate').onclick=generate;$('print').onclick=()=>print();
-if(!officialIndex.size)$('mode').value='series';
-configureTypes();counts();generate();
-const ctx=$('plot').getContext('2d');
-if(ctx){
- ctx.translate(326,200);ctx.lineWidth=1;
- ctx.strokeStyle='#ffffff22';
- for(let x=-340;x<=340;x+=27){ctx.beginPath();ctx.moveTo(x,-210);ctx.lineTo(x,180);ctx.stroke()}
- for(let y=-216;y<180;y+=27){ctx.beginPath();ctx.moveTo(-340,y);ctx.lineTo(340,y);ctx.stroke()}
- ctx.strokeStyle='#ffffff88';ctx.beginPath();ctx.moveTo(-330,0);ctx.lineTo(330,0);ctx.moveTo(0,150);ctx.lineTo(0,-200);ctx.stroke();
- ctx.lineWidth=4;ctx.strokeStyle='#b0ffe1';ctx.beginPath();for(let x=-330;x<=330;x++){let y=45-(x-25)**2/145;if(x===-330)ctx.moveTo(x,y);else ctx.lineTo(x,y)}ctx.stroke();
- ctx.strokeStyle='#ffbc72';ctx.beginPath();ctx.moveTo(-320,135);ctx.lineTo(330,-154);ctx.stroke();
+for(const [id,title,description] of modes){
+ const tab=button('',()=>{$('mode').value=id;configureTypes()});
+ tab.dataset.mode=id;tab.append(node('strong',title),node('span',description));
+ $('mode-cards').append(tab);
 }
+$('mode').value=officialIndex.size?'fipi-exam':'series';
+configureTypes();counts();generate();

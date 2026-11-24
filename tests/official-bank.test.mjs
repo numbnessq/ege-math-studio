@@ -43,3 +43,12 @@ test('Подтипы планиметрии и ограничения при с�
   for(const [number,subtype] of selected) assert.equal(sheet[number-1].subtype,subtype);
   assert.throws(()=>app.officialSheets(index,1,false,()=>0,new Map([[1,'Недоступный подтип']])),/№ 1/);
 });
+
+test('Повторная сборка меняет доступные задания, микс использует разные работы',()=>{
+  const sample=new Map(Array.from({length:19},(_,i)=>[i+1,['A','B','C'].map(work=>({id:work+(i+1),work,type:i+1}))]));
+  const first=app.officialSheets(sample,1,false,()=>0);
+  const second=app.officialSheets(sample,1,false,()=>0,new Map(),first);
+  assert.equal(first[0].length,19);
+  assert.ok(new Set(first[0].map(t=>t.work)).size>=2);
+  assert.ok(second[0].every((t,i)=>t.id!==first[0][i].id));
+});

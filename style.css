@@ -23,3 +23,7 @@ body{margin:0}.wrap{width:min(1180px,100%);padding-inline:clamp(16px,4vw,46px);m
 
 .subtype-caption{font-size:.9rem;color:var(--muted);margin-top:7px}
 #exam-subtypes{margin-top:10px}#exam-subtype-list{max-height:42vh;overflow:auto;padding:0 4px 8px}
+
+.hero{min-height:140px;background:#133b3e}.hero>div{max-width:none}.hero h1{font-size:clamp(2rem,5vw,3.6rem);letter-spacing:-.05em}.mode-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:18px}.mode-cards button{text-align:left;display:grid;gap:3px;align-content:start;padding:10px 12px}.mode-cards span{font-size:.8rem;font-weight:450}.mode-cards button[aria-pressed=true]{background:#194f51}.layout aside{position:sticky;top:12px}#jump-list:not([hidden]){display:flex;flex-wrap:wrap;gap:4px;margin:10px 0}#jump-list button{min-width:34px;min-height:34px;padding:4px}.original-body .statgrad-crop{display:block;width:min(100%,690px)}.task-editor select{min-width:0;width:100%}@media(max-width:730px){.mode-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.layout aside{position:static}}@media print{.mode-cards,#jump-list:not([hidden]){display:none}.original-body .statgrad-crop{max-height:145mm;object-fit:contain;object-position:left center}}
+
+#bank-settings label[hidden]{display:none}.statgrad-crop img{display:block;max-width:100%;margin-bottom:4px}.mode-cards button:focus-visible{outline-offset:1px}
