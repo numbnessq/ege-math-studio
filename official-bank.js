@@ -32,7 +32,8 @@ function makeOfficialIndex(rows, mapping = {}) {
   const byType = new Map();
   for (const item of rows) {
     const ref = mapping[String(item.qid).toUpperCase()] || {};
-    const type = ref.type || item.type || classifyFipi(item.text || '', item.kes_codes || []);
+    const reviewed = { '4B912B':7, 'E9862E':12, '7CC260':18, 'BE1DDB':8 };
+    const type = ref.type || item.type || reviewed[item.qid] || classifyFipi(item.text || '', item.kes_codes || []);
     const task = {...item, type, answer: ref.answer ?? item.answer ?? null,
       answerSource: ref.answerSource || ref.source || item.answerSource, original: true};
     if (!byType.has(type)) byType.set(type, []);
