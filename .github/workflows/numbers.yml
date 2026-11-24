@@ -1,0 +1,23 @@
+name: Импорт номеров и ключей
+on:
+  push:
+    branches: [import/answer-index]
+    paths: ['scripts/import-numbers.py','.github/workflows/numbers.yml']
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install requests beautifulsoup4 --quiet
+      - run: python -u scripts/import-numbers.py
+      - name: Сохранить классификацию
+        run: |
+          if test -f data/exam-numbers.js; then
+            git config user.name github-actions
+            git config user.email github-actions@users.noreply.github.com
+            git add data/exam-numbers.js
+            git diff --cached --quiet || git commit -m 'Обновить номера и фактические ответы'
+            git push
+          fi
