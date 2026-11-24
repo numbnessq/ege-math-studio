@@ -25,10 +25,11 @@ try {
   await generate();
   assert.ok(initial.every(id=>typeof id==='string'));
   assert.notDeepEqual(await ids(),initial);
-  await page.getByRole('button',{name:'1',exact:true}).last().click();
   const first=tasks().first();
   await first.getByText('Заменить задание').click();
-  const choices=first.getByLabel('Задание',{exact:true});
+  const choices=first.locator('.edit-controls select').last();
+  try { await choices.waitFor({timeout:5000}); }
+  catch(error){console.log(errors,await first.locator('details').first().evaluate(x=>x.outerHTML));throw error;}
   assert.ok((await choices.locator('option').allTextContents()).every(s=>s.includes(' · ')&&!/^[a-f0-9]{6}$/i.test(s)));
   const replacement=await choices.inputValue();
   await first.getByRole('button',{name:'Применить к этому варианту'}).click();
