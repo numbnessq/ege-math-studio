@@ -15,16 +15,18 @@ jobs:
       - run: python -m pip install beautifulsoup4 requests
       - run: |
           python - <<'PY'
-          import requests
+          import os,re,json,requests,sys
           from bs4 import BeautifulSoup
-          u='https://ege.kowalt.ru/matematika-profil/problem/40b442/'
-          try:
-           r=requests.get(u,timeout=12); print('KOWALT HTTP',r.status_code)
-           s=BeautifulSoup(r.content,'html.parser')
-           print('assets',[(e.name,e.get('src')) for e in s.select('script[src]')])
-           print('attributes',[(e.name,e.get('class'),list(e.attrs)) for e in s.select('main *') if e.get('class')][:52])
-           print('JSON',[(e.get('id'),e.get('type'),str(e.string)[:160]) for e in s.select('script:not([src])')][:15])
-          except Exception as e: print('KOWALT',str(e))
+          from urllib.parse import urljoin
+          root='https://ege.kowalt.ru/'
+          for rel in ['data/matematika-profil/40b442.json','matematika-profil/bank/','matematika-profil/problem/40b442/','data/matematika-profil.json']:
+           try:
+            r=requests.get(urljoin(root,rel),timeout=8);print('STATUS',rel,r.status_code,len(r.content))
+            if '.json' in rel:
+             j=r.json(); print('JSONINFO',list(j)[:10] if isinstance(j,dict) else len(j)); print('SAMPLE',str(j)[:1800])
+            else:
+             soup=BeautifulSoup(r.content,'html.parser');print('MAIN',[(e.name,e.attrs,e.get_text(' ',strip=True)[:48]) for e in soup.select('main p,main .statement,main img')[:13]])
+           except Exception as exc: print('ERR',str(exc))
           PY
       - run: python -u scripts/import-fipi.py
       - run: |
