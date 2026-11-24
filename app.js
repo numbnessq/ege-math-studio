@@ -2,7 +2,7 @@
 const $=id=>document.getElementById(id);
 const {topics,records,official}=mathBank;
 const families=[...new Map(records.map(t=>[t.family,t])).values()];
-let count=4, active=0, sheets=[], currentMode='series', packetKeysOnly=false;
+let count=4, active=0, sheets=[], currentMode='series', packetKeysOnly=false, packetSubtype='';
 function node(tag,text){const el=document.createElement(tag);if(text!==undefined)el.textContent=text;return el}
 function button(text,act){const b=node('button',text);b.onclick=act;return b}
 function options(el,items){el.replaceChildren(...items.map(([v,label])=>new Option(label,v)))}
@@ -14,15 +14,46 @@ const topicName = n => topics[n-1] || 'Вне текущей нумерации'
 function available(n, keys=$('keys-only').checked) {
  return (officialIndex.get(n)||[]).filter(t=>!keys || hasOfficialAnswer(t));
 }
+function subtypeOptions(select, pool, previous=select.value){
+ const totals=new Map();
+ for(const task of pool)totals.set(task.subtype,(totals.get(task.subtype)||0)+1);
+ const choices=[...totals].sort(([a],[b])=>a.localeCompare(b,'ru'));
+ options(select,[['','Все подтипы'],...choices.map(([name,n])=>[name,name+' ('+n+')'])]);
+ select.value=totals.has(previous)?previous:'';
+}
+function configuredCards(){
+ const subtype=$('subtype').value;
+ return available(Number($('type').value)).filter(t=>!subtype || t.subtype===subtype);
+}
 function chooseOriginal(){
- const group=available(Number($('type').value));
+ const group=configuredCards();
+ const topicLink=$('math100-topics');
+ const math100Topic=Number($('type').value)===1 ? math100PlanarTopics.indexOf($('subtype').value)+1 : 0;
+ topicLink.href=math100Topic?'https://math100.ru/prof-ege_2023_1-'+math100Topic+'/':'https://math100.ru/ege-profil2024/';
+ topicLink.textContent=math100Topic?'Этот подтип на Math100 ↗':'Темы и задачи на Math100 ↗';
  options($('original-choice'),group.map((t,i)=>[t.id,(i+1)+' · '+officialCode(t)+' · '+(t.text || t.html.replace(/<[^>]*>/g,' ')).replace(/\s+/g,' ').trim().slice(0,90)]));
  $('generate').disabled=!group.length;
+}
+function configureExamSubtypes(){
+ const list=$('exam-subtype-list');
+ const prior=new Map([...list.querySelectorAll('select')].map(s=>[s.dataset.number,s.value]));
+ const rows=[];
+ for(let n=1;n<=19;n++){
+   const label=node('label','№ '+n+' · '+topicName(n));
+   const select=node('select');select.dataset.number=n;
+   subtypeOptions(select,available(n),prior.get(String(n)));
+   label.append(select);rows.push(label);
+ }
+ list.replaceChildren(...rows);
+}
+function configureOriginalSubtype(previous){
+ subtypeOptions($('subtype'),available(Number($('type').value)),previous);
+ chooseOriginal();
 }
 function configureTypes(){
  const mode=$('mode').value,original=mode==='official';
  const isBank=bankMode(mode),full=mode==='fipi-exam'||mode==='exam';
- $('bank-settings').hidden=!isBank;$('original-picker').hidden=mode!=='fipi';
+ $('bank-settings').hidden=!isBank;$('original-picker').hidden=mode!=='fipi';$('exam-subtypes').hidden=mode!=='fipi-exam';
  $('generate').disabled=false;
  $('typeBox').hidden=full;$('familyBox').hidden=mode!=='series';$('copies').hidden=original||mode==='fipi';
  if(isBank){
@@ -30,8 +61,13 @@ function configureTypes(){
    const numbers=[...officialIndex.keys()].sort((a,b)=>(a||99)-(b||99));
    options($('type'),numbers.map(n=>[n,(n?'№ '+n+' · ':'')+topicName(n)+' ('+available(n).length+')']));
    if(prev!=='' && numbers.includes(Number(prev))) $('type').value=prev;
-   if(mode==='fipi')chooseOriginal();
-   $('help').textContent=originalTasks.length+' карточек в загруженном банке. '+(full?'Для каждого номера случайно выбирается оригинальное задание.':'Выберите экзаменационный номер и код карточки.');
+   if(mode==='fipi')configureOriginalSubtype();
+   if(mode==='fipi-exam'){
+     configureExamSubtypes();
+     $('math100-topics').href='https://math100.ru/ege-profil2024/';
+     $('math100-topics').textContent='Темы и задачи на Math100 ↗';
+   }
+   $('help').textContent=originalTasks.length+' карточек в загруженном банке. '+(full?'Для каждого номера случайно выбирается оригинальное задание.':'Выберите номер, подтип и карточку.');
    $('generate').textContent=full?'Собрать комплект':'Открыть задачу';
    return;
  }
@@ -52,13 +88,16 @@ function generate(){
  let next;
  try {
    if(mode==='fipi'){
-     const task=available(Number($('type').value)).find(t=>String(t.id)===$('original-choice').value);
+     const task=configuredCards().find(t=>String(t.id)===$('original-choice').value);
      if(!task)throw Error('В этой подборке нет заданий.');
      next=[[task]];
-   }else if(mode==='fipi-exam')next=officialSheets(officialIndex,count,$('keys-only').checked);
+   }else if(mode==='fipi-exam'){
+     const selection=new Map([...$('exam-subtype-list').querySelectorAll('select')].map(s=>[Number(s.dataset.number),s.value]));
+     next=officialSheets(officialIndex,count,$('keys-only').checked,Math.random,selection);
+   }
    else next=mode==='official'?[[official.find(t=>t.type===Number($('type').value))]]:buildSheets(mathBank,mode,Number($('family').value),count);
  }catch(error){$('help').textContent=error.message;return}
- sheets=next;currentMode=mode;packetKeysOnly=$('keys-only').checked;
+ sheets=next;currentMode=mode;packetKeysOnly=$('keys-only').checked;packetSubtype=$('subtype').value;
  active=0;topicFilter.value='all';render();
 }
 const topicFilter=$('topic-filter');
@@ -114,14 +153,14 @@ function bankEditor(t,position){
  edit.ontoggle=()=>{
    if(!edit.open || edit.children.length>1)return;
    const controls=node('div');controls.className='edit-controls';
-   const topic=node('select'),card=node('select');
+   const topic=node('select'),subtype=node('select'),card=node('select');
    const types=[...officialIndex.keys()].filter(n=>n>0&&(n<=12)===(position<12)).sort((a,b)=>a-b);
    options(topic,types.map(n=>[n,'№ '+n+' · '+topicName(n)]));topic.value=String(t.type);
    const used=new Set(sheets.flat().map(item=>item.id));
    const keys=packetKeysOnly;
    let pool;
    function refresh(){
-     pool=available(Number(topic.value),keys).filter(item=>!used.has(item.id));
+     pool=available(Number(topic.value),keys).filter(item=>!used.has(item.id) && (!subtype.value || item.subtype===subtype.value));
      options(card,pool.map(item=>[item.id,officialCode(item)]));apply.disabled=!pool.length;
    }
    const apply=button('Применить к этому варианту',()=>{
@@ -129,10 +168,17 @@ function bankEditor(t,position){
      sheets[active][position]=chosen;topicFilter.value='all';render();
      $('message').textContent='Задание и ключ обновлены в варианте '+(active+1)+'.';
    });
-   for(const [caption,select] of [['Тема замены',topic],['Карточка ФИПИ',card]]){
+   for(const [caption,select] of [['Тема замены',topic],['Подтип замены',subtype],['Карточка ФИПИ',card]]){
      const label=node('label',caption);label.append(select);controls.append(label);
    }
-   topic.onchange=refresh;refresh();controls.append(apply);edit.append(controls);
+   function refreshSubtypes(previous){
+     subtypeOptions(subtype,available(Number(topic.value),keys).filter(item=>!used.has(item.id)),previous);
+     refresh();
+   }
+   topic.onchange=()=>refreshSubtypes('');
+   subtype.onchange=refresh;
+   refreshSubtypes(t.subtype);
+   controls.append(apply);edit.append(controls);
  };
  return edit;
 }
@@ -142,7 +188,7 @@ function taskView(t,position){
  heading.append(node('b',number?'№ '+number:'Архив'),node('span',(number!==t.type?'Тип № '+t.type+' · ':'')+topicName(t.type)));
  if(bankMode(currentMode)){
    if(isExam())heading.append(bankEditor(t,position));
-   heading.append(node('small',officialCode(t)));article.append(heading,originalBody(t));
+   heading.append(node('small',officialCode(t)));article.append(heading,Object.assign(node('div',t.subtype),{className:'subtype-caption'}),originalBody(t));
    const a=node('a','Оригинал в банке ФИПИ ↗');a.href=t.source;a.target='_blank';a.rel='noreferrer';article.append(a);
    if(hasOfficialAnswer(t)){
      const d=node('details');d.append(node('summary','Ответ'),node('strong','Ответ: '+formatAnswer(t)));
@@ -150,13 +196,13 @@ function taskView(t,position){
      article.append(d);
    }else article.append(node('small',' · Ответ не загружен'));
    if(currentMode==='fipi'){
-     const list=available(t.type,packetKeysOnly), pos=list.indexOf(t);
+     const list=available(t.type,packetKeysOnly).filter(x=>!packetSubtype || x.subtype===packetSubtype), pos=list.indexOf(t);
      const nav=node('div');nav.className='analog browse';
      for(const [direction,label] of [[-1,'← Предыдущее'],[1,'Следующее →']]){
        const next=list[pos+direction];
        const b=button(label,()=>{
          $('mode').value='fipi';$('keys-only').checked=packetKeysOnly;configureTypes();
-         $('type').value=String(t.type);chooseOriginal();$('original-choice').value=String(next.id);generate();
+         $('type').value=String(t.type);configureOriginalSubtype(packetSubtype);$('original-choice').value=String(next.id);generate();
        });
        b.disabled=!next;nav.append(b);
      }
@@ -200,7 +246,7 @@ function render(){
  $('tasks').replaceChildren(...views,answerKey());applyFilter();
  $('message').textContent='Открыт вариант '+(active+1)+' из '+sheets.length;
 }
-$('mode').onchange=configureTypes;$('type').onchange=()=>{$('mode').value==='fipi'?chooseOriginal():configureFamily()};$('keys-only').onchange=configureTypes;$('generate').onclick=generate;$('print').onclick=()=>print();
+$('mode').onchange=configureTypes;$('type').onchange=()=>{$('mode').value==='fipi'?configureOriginalSubtype(''):configureFamily()};$('keys-only').onchange=configureTypes;$('subtype').onchange=chooseOriginal;$('generate').onclick=generate;$('print').onclick=()=>print();
 if(!officialIndex.size)$('mode').value='series';
 configureTypes();counts();generate();
 const ctx=$('plot').getContext('2d');

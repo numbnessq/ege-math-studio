@@ -36,18 +36,21 @@ function makeOfficialIndex(rows, mapping = {}) {
     const type = ref.type || item.type || reviewed[item.qid] || classifyFipi(item.text || '', item.kes_codes || []);
     const task = {...item, type, answer: ref.answer ?? item.answer ?? null,
       answerSource: ref.answerSource || ref.source || item.answerSource, original: true};
+    task.subtype = taskSubtype(task, ref.subtopic);
     if (!byType.has(type)) byType.set(type, []);
     byType.get(type).push(task);
   }
   return byType;
 }
 
-function officialSheets(byType, count, keysOnly, random = Math.random) {
+function officialSheets(byType, count, keysOnly, random = Math.random, subtypes = new Map()) {
   const result = Array.from({length: count}, () => []);
   for (let n = 1; n <= 19; n++) {
     const pool = (byType.get(n) || []).filter(t => !keysOnly || hasOfficialAnswer(t));
+    const subtype = subtypes.get(n);
+    if (subtype) pool.splice(0, pool.length, ...pool.filter(t => t.subtype === subtype));
     if (pool.length < count) throw Error('Для № ' + n + ' доступно ' + pool.length +
-      ' заданий. Уменьшите число вариантов или снимите фильтр ответов.');
+      ' заданий. Измените подтип, число вариантов или фильтр ответов.');
     for (const sheet of result) {
       sheet.push(pool.splice(Math.floor(random() * pool.length), 1)[0]);
     }
