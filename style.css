@@ -12,3 +12,11 @@ body{margin:0}.wrap{width:min(1180px,100%);padding-inline:clamp(16px,4vw,46px);m
 .taskhead{flex-wrap:wrap}.task-editor{margin-left:auto;font-size:.85rem}.task-editor[open]{width:100%;margin-left:0}.edit-controls{display:grid;gap:7px;padding:5px}.edit-controls label,#filter-box{font-size:.88rem;font-weight:600}.edit-controls select,#filter-box select{display:block;margin-top:3px}#filter-box:not([hidden]){display:block;width:min(100%,310px);margin-top:15px}
 #answer-key{display:none}@media screen{.filtered{display:none}}
 @media print{#filter-box,#filter-box:not([hidden]),.task-editor{display:none}.task-figure{width:53mm;margin:2mm 0}.paper{background:white;color:black}#answer-key{display:block;break-before:page}#answer-key section{break-inside:avoid}#answer-key.full-exam section+section{break-before:page}#answer-key h2,#answer-key h3{break-after:avoid}#answer-key dl{margin:0}#answer-key dl>div{display:flex;gap:8mm;border-bottom:1px solid #ccc;padding:1mm 0;break-inside:avoid}#answer-key dt{width:14mm;font-weight:bold;flex:none}#answer-key dd{margin:0}.sheet{margin:0}.sheet[hidden]{display:block}}
+
+.archive-link{color:#c8ffdd;font-weight:650;text-underline-offset:4px}
+.paper,.original-body{min-width:0}.original-body{font:1.14rem/1.65 Georgia,serif;overflow-x:auto;margin:14px 0}
+.original-body p{margin:.5em 0}.original-body img{max-width:100%;height:auto;vertical-align:middle}
+.original-body table{border-collapse:collapse}.original-body td,.original-body th{padding:4px}.original-body math{font-size:1.08em}
+@media print{.original-body{font-size:12pt;overflow:visible}.original-body img{max-height:76mm;object-fit:contain}article>small{display:none}}
+
+.browse button+button{margin-left:8px}button:disabled{opacity:.5;cursor:default}.edit-controls select,aside select{max-width:100%}

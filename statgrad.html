@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Архив СтатГрада · Разлиновано</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .archive{margin-block:32px}.archive h1{font:500 clamp(2rem,6vw,3.8rem)/1.1 Georgia,serif;margin:18px 0 8px}
+    .archive-controls{display:flex;align-items:end;flex-wrap:wrap;gap:12px;margin:22px 0}.archive-controls label{display:grid;gap:4px}
+    .archive-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr));gap:14px}
+    .archive-list section{border:1px solid var(--line);border-radius:12px;background:var(--paper);padding:16px}
+    .archive-list h2{font-size:1.05rem;margin:0 0 8px}.archive-list ul{list-style:none;padding:0;margin:0}
+    .archive-list li{display:flex;justify-content:space-between;align-items:center;gap:12px;border-top:1px solid var(--line)}
+    .archive-list a{display:inline-block;padding:9px 0}.archive-list button{font-size:.85rem;min-height:36px}
+    dialog{width:min(850px,96vw);padding:14px;border:1px solid var(--line);border-radius:12px}
+    dialog::backdrop{background:#17373999}dialog header{display:flex;align-items:center;justify-content:space-between;gap:8px;background:white;color:var(--ink)}
+    dialog h2{margin:0;font-size:1.1rem}dialog iframe{display:block;width:100%;height:65vh;border:1px solid var(--line);margin:12px 0}
+  </style>
+</head>
+<body>
+  <header><div class="wrap top"><a class="brand" href="./"><b>∿</b> Разлиновано</a><span>ЕГЭ · профильная математика</span></div></header>
+  <main class="wrap archive">
+    <a href="./">← К конструктору</a>
+    <h1>Архив СтатГрада</h1>
+    <p>Выберите дату и номер варианта, чтобы открыть работу по профильной математике на Math100.</p>
+    <div class="archive-controls">
+      <label>Учебный год<select id="archive-year"></select></label>
+      <span id="archive-count" role="status"></span>
+    </div>
+    <div id="archive-list" class="archive-list"></div>
+    <footer><a href="https://math100.ru/egeprofil-statgrad/" target="_blank" rel="noreferrer">Исходный архив Math100 ↗</a></footer>
+  </main>
+  <dialog id="preview" aria-labelledby="pdf-title">
+    <header><h2 id="pdf-title">Просмотр варианта</h2><button type="button" id="close-preview">Закрыть</button></header>
+    <iframe title="Документ Math100"></iframe>
+    <a id="open-pdf" target="_blank" rel="noreferrer">Открыть PDF в новой вкладке ↗</a>
+  </dialog>
+  <script src="data/statgrad.js"></script>
+  <script>
+    const archive = globalThis.statgradArchive;
+    const yearSelect = document.getElementById('archive-year');
+    const dateFormat = new Intl.DateTimeFormat('ru-RU', {day:'numeric',month:'long',year:'numeric',timeZone:'UTC'});
+    function schoolYear(row) {
+      const [year, month] = row.date.split('-').map(Number);
+      return month >= 9 ? year : year-1;
+    }
+    const years = [...new Set(archive.map(schoolYear))].sort((a,b)=>b-a);
+    yearSelect.add(new Option('Все годы','all'));
+    for (const year of years) yearSelect.add(new Option(year+'–'+(year+1),year));
+    yearSelect.value = String(years[0]);
+    const preview = document.getElementById('preview');
+    const frame = preview.querySelector('iframe');
+    function showPdf(work) {
+      const title = 'Вариант '+work.label+' · '+dateFormat.format(new Date(work.date+'T00:00:00Z'));
+      document.getElementById('pdf-title').textContent = title;
+      document.getElementById('open-pdf').href = work.viewer;
+      frame.title = title;
+      frame.src = work.viewer;
+      preview.showModal();
+    }
+    document.getElementById('close-preview').onclick = ()=>preview.close();
+    preview.addEventListener('close',()=>frame.removeAttribute('src'));
+    function link(url,text) {
+      const element = document.createElement('a');
+      element.href=url; element.textContent=text; element.target='_blank'; element.rel='noreferrer';
+      return element;
+    }
+    function showWorks() {
+      const selected = yearSelect.value;
+      const works = archive.filter(work=>selected==='all' || String(schoolYear(work))===selected);
+      const byDate = new Map();
+      for (const work of works) {
+        if (!byDate.has(work.date)) byDate.set(work.date,[]);
+        byDate.get(work.date).push(work);
+      }
+      const list = document.getElementById('archive-list');
+      list.replaceChildren();
+      for (const date of [...byDate.keys()].sort().reverse()) {
+        const section = document.createElement('section');
+        const heading = document.createElement('h2');
+        heading.textContent = dateFormat.format(new Date(date+'T00:00:00Z'));
+        const items = document.createElement('ul');
+        for (const work of byDate.get(date)) {
+          const item = document.createElement('li');
+          item.append(link(work.url,'Вариант '+work.label+' ↗'));
+          if (work.viewer) {
+            const view = document.createElement('button');
+            view.textContent = 'PDF';
+            view.setAttribute('aria-label','Посмотреть PDF варианта '+work.label);
+            view.addEventListener('click',()=>showPdf(work));
+            item.append(view);
+          }
+          items.append(item);
+        }
+        section.append(heading,items); list.append(section);
+      }
+      document.getElementById('archive-count').textContent='Вариантов в подборке — '+works.length+' из '+archive.length;
+    }
+    yearSelect.addEventListener('change',showWorks);
+    showWorks();
+  </script>
+</body>
+</html>
