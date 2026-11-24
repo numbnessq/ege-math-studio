@@ -33,7 +33,19 @@ def inspect(row):
         return row, str(err)[:100]
 
 path = Path('data/statgrad.js')
-rows = json.loads(path.read_text().split('globalThis.statgradArchive = ',1)[1].strip().removesuffix(';'))
+payload = path.read_text().split('globalThis.statgradArchive = ',1)[1].strip().removesuffix(';')
+rows = json.loads(re.sub(r',\s*\]
+first,status=inspect(rows[0])
+print('First article',status,first.get('viewer','none'),flush=True)
+if status!='ok': raise SystemExit('Source unreachable')
+with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
+    results = list(pool.map(inspect, rows[1:]))
+rows = [first]+[row for row,_ in results]
+errors = [err for _,err in results if err!='ok']
+print('Works:',len(rows),'preview links:',sum('viewer' in row for row in rows),'errors:',len(errors),errors[:3],flush=True)
+assert len(rows)==len(set(r['url'] for r in rows))
+path.write_text('// Метаданные публичного архива https://math100.ru/egeprofil-statgrad/\nglobalThis.statgradArchive = [\n  '+',\n  '.join(json.dumps(row,ensure_ascii=False,separators=(',',':')) for row in rows)+'\n];\n')
+,']',payload))
 first,status=inspect(rows[0])
 print('First article',status,first.get('viewer','none'),flush=True)
 if status!='ok': raise SystemExit('Source unreachable')
