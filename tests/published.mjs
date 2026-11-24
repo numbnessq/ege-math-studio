@@ -80,6 +80,27 @@ try {
     const expectedPage=(i===0?'Ответы для учителя':'')+'Вариант '+(i+1)+expected[i].flat().join('');
     assert.equal(compact(tail[i]),compact(expectedPage),'Содержимое страницы ключа '+(i+1));
   }
+  await page.emulateMedia({media:'screen'});
+  await page.locator('#mode').selectOption('fipi');
+  await page.locator('#type').selectOption('2');
+  await page.locator('#generate').click();
+  const code=()=>page.locator('.sheet:visible .taskhead small').innerText();
+  const firstId=await code();
+  await page.getByRole('button',{name:'Следующее →'}).click();
+  assert.notEqual(await code(),firstId);
+  await page.locator('#mode').selectOption('fipi-exam');
+  await page.locator('#keys-only').check();
+  await page.locator('#generate').click();
+  assert.equal(new Set(await page.locator('.sheet .taskhead small').allTextContents()).size,76);
+  assert.ok((await page.locator('#answer-key dd').allTextContents()).every(s=>s.trim() && !s.startsWith('Ответ не загружен')));
+  await page.emulateMedia({media:'print'});
+  assert.equal(await page.locator('.original-body:visible').count(),76);
+  assert.equal(await page.locator('#answer-key section:visible').count(),4);
+  await page.pdf({format:'A4',path:'bank.pdf'});
+  await page.emulateMedia({media:'screen'});
+  await page.getByRole('link',{name:/Архив СтатГрада/}).click();
+  await page.locator('#archive-year').selectOption('all');
+  assert.equal(await page.locator('#archive-list li').count(),246);
   assert.deepEqual(errors,[]);
   console.log('Проверены замена темы, чертёж и 76 ответов на последних четырёх страницах PDF.');
 } finally { await browser.close(); }
