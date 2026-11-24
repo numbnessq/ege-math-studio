@@ -74,7 +74,7 @@ def extra(qid_url):
         if j.get('statement'):
             return {'id':qid,'statement':j['statement'],'slot':j.get('slot') or 0}
     soup=BeautifulSoup(get(url).content,'html.parser')
-    stmt=soup.select_one('.statement, .task__statement, .task-body, [itemprop="text"]')
+    stmt=soup.select_one('article.task .sheet, .statement, .task__statement, .task-body, [itemprop="text"]')
     if not stmt:
         raise ValueError('Не найден блок условия '+qid+' | '+str([(e.name,e.attrs) for e in soup.select('main div,main article,main section')][:22]))
     return {'id':qid,'statement':stmt.decode_contents(),'slot':0}
