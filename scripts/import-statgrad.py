@@ -1,11 +1,13 @@
 """Import printable clips from public, watermarked Math100 previews."""
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+import io
 import json
 import re
 
 import pymupdf as fitz
 import requests
+from PIL import Image, ImageChops
 
 DEST = Path('data/statgrad-img')
 EXPECTED = list(range(1, 20))
@@ -92,17 +94,20 @@ def extract(row):
                 relevant = [b for b in columns[page_no,col] if top<=b[1]<bottom]
                 if not relevant:
                     continue
-                if num<=12:
-                    blank = next((b[1] for b in relevant if b[4].strip().startswith('Ответ:')),None)
-                    if blank:
-                        bottom = min(bottom,blank-3)
                 if bottom-top < 18:
                     raise ValueError(f'пустая область № {num}')
                 path = DEST / f"{row['label']}-{num}-{part}.jpg"
-                rect = fitz.Rect(offset+45,top,offset+397,bottom)
+                rect = fitz.Rect(offset+49,top,offset+397,bottom)
                 pix = page.get_pixmap(matrix=fitz.Matrix(2,2),clip=rect,alpha=False)
-                html.append((path, pix.tobytes('jpeg',jpg_quality=89)))
-                condition.extend(b[4] for b in relevant if b[1]<bottom)
+                picture = Image.frombytes('RGB',(pix.width,pix.height),pix.samples)
+                mask = ImageChops.difference(picture,Image.new('RGB',picture.size,'white'))
+                bounds = mask.getbbox()
+                if bounds:
+                    picture = picture.crop((0,0,pix.width,min(pix.height,bounds[3]+10)))
+                encoded = io.BytesIO()
+                picture.save(encoded,format='JPEG',quality=89,optimize=True)
+                html.append((path,encoded.getvalue()))
+                condition.extend(b[4] for b in relevant if b[1]<bottom and not b[4].lstrip().startswith('Ответ:'))
             if not html:
                 raise ValueError(f'пустое условие № {num}')
             plain = ' '.join(re.sub(r'[\x00-\x1f]+',' ',s).strip() for s in condition)
