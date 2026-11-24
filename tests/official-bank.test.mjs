@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 
 const app=vm.createContext({});
-for(const file of ['data/fipi.js','data/exam-numbers.js','official-bank.js','data/statgrad.js']){
+for(const file of ['data/fipi.js','data/exam-numbers.js','subtypes.js','official-bank.js','data/statgrad.js']){
   vm.runInContext(readFileSync(new URL('../'+file,import.meta.url),'utf8'),app);
 }
 const bank=app.fipiBank;
@@ -31,4 +31,15 @@ test('Архив СтатГрада сохраняет адрес и дату к
   assert.equal(new Set(works.map(w=>w.url)).size,works.length);
   assert.ok(works.length>=246);
   assert.ok(works.every(w=>new URL(w.url).host==='math100.ru' && /^\d{4}-\d{2}-\d{2}$/.test(w.date)));
+});
+
+test('Подтипы планиметрии и ограничения при сборке варианта',()=>{
+  const names=new Set(index.get(1).map(t=>t.subtype));
+  assert.equal(names.size,9);
+  assert.ok(names.has('Трапеция') && names.has('Касательные и хорды'));
+  for(let n=1;n<=19;n++) assert.ok(new Set(index.get(n).map(t=>t.subtype)).size>=2);
+  const selected=new Map([[1,'Трапеция'],[15,'Логарифмические неравенства']]);
+  const [sheet]=app.officialSheets(index,1,true,()=>0,selected);
+  for(const [number,subtype] of selected) assert.equal(sheet[number-1].subtype,subtype);
+  assert.throws(()=>app.officialSheets(index,1,false,()=>0,new Map([[1,'Недоступный подтип']])),/№ 1/);
 });
